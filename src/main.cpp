@@ -61,6 +61,8 @@ float flutterParams[NUM_OPTIONS][6] = {
 #define MIN_FREQ_SETTING 0.01    // Minimum frequency setting
 #define MAX_FREQ_SETTING 100.0  // Maximum frequency setting
 
+const int buttonPin = 7; // Pin for the button
+
 int selectedFlutter = 0; // Default selected flutter option
 unsigned long timePoints[5] = {0, 1, 500000, 500001, 999999}; // Time points for the five phases of the cycle (last value is end of cycle)
 unsigned long cycleTimeCurent = 0; // Current time in the cycle
@@ -259,15 +261,36 @@ void updateLights() {
     }
 }
 
+void checkButtonAndCycleFlutter() {
+
+    if (digitalRead(buttonPin) == HIGH) { // Button is pressed and was not already detected
+        // Increment selectedFlutter and loop back to 0 if it exceeds the max value
+        selectedFlutter = (selectedFlutter + 1) % NUM_OPTIONS;
+
+        // Update the flutter time points for the new selection
+        for (int i = 0; i < NUM_CHANNELS; i++) {
+            setPWMDutyCycle(i, pwmBank[0][i]);
+        }
+        updateFlutterTimePoints();
+
+        // Print the new selected flutter for debugging
+        Serial.printf("Button pressed! Cycling to selectedFlutter: %d\n", selectedFlutter);
+
+        while( digitalRead(buttonPin) == HIGH) { delay(10); } // Wait for button release;
+    }
+}
+
 void setupPWM() {
     Serial.begin(115200);
     showWelcomeScreen();
     setPWMResolution(pwmResolution);
     limitFlutterParameters();
+    pinMode(buttonPin, INPUT); // Set button pin as input
 }
 
 void loopPWM() {
     processSerialInput();
+    checkButtonAndCycleFlutter(); // Check button state and cycle through flutter options
     if(selectedFlutter > 0) { // If flutter is active
         updateLights();
     }
