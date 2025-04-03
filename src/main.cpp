@@ -3,6 +3,8 @@
 // TODO: Reorder pwmPins and ledWls to have LEDs in ascending order
 // TODO: Solder channels 25 and 32
 // TODO: Make light flicker at some F, think about the steepness of the transition
+// TODO: timePoints have to be at least increasing by 1 to avoid division by zero
+// TODO: Make F0* turn off lights
 
 
 #ifndef MAIN_H
@@ -18,14 +20,53 @@ int pwmValues[NUM_CHANNELS] = {0}; // Start with 0% duty cycle
 int pwmFrequency = 500; // Default PWM frequency in Hz
 int pwmResolution = 12; // Default bit resolution (user-definable)
 
-const int NUM_SLOTS = 5;
+const int NUM_SLOTS = 9;
 int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
   {   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0},
   {1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023},
   {2047, 2047, 2047, 2047, 2047, 2047, 2047, 2047, 2047, 2047, 2047, 2047},
   {3071, 3071, 3071, 3071, 3071, 3071, 3071, 3071, 3071, 3071, 3071, 3071},
-  {4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095}
+  {4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095},
+  {4095,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 4095},
+  {   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0},
+  {   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 4095},
+  {   0,    0,    0,    0,    0,    0,    0, 4095,    0, 4095,    0,    0}
 };
+
+// flutterParams holds the control values for switching between pwmBanks with a particular transition
+// Position 0: light setting 1
+// Position 1: light setting 2
+// Position 2: frequency
+// Position 3: duty cycle
+// Position 4: part of duty cycle for transitions
+// Position 5: type of transition (0: linear, 1: sine)
+const int NUM_OPTIONS = 14;
+float flutterParams[NUM_OPTIONS][6] = {
+    {0,     0,      1.0,     20.0,       0.0,       0},
+    {0,     5,      1.0,     20.0,       0.0,       0},
+    {0,     5,      1.0,     40.0,      20.0,       0},
+    {0,     5,      1.0,     60.0,      20.0,       1},
+    {0,     5,      0.4,     50.0,      50.0,       1},
+    {0,     8,      0.4,     50.0,      50.0,       1},
+    {5,     8,      0.4,     50.0,      50.0,       1},
+    {5,     7,      0.4,     50.0,      50.0,       1},
+    {0,     5,      1.0,     30.0,      30.0,       1},
+    {0,     5,      2.0,     30.0,      30.0,       1},
+    {0,     5,      4.0,     30.0,      30.0,       1},
+    {1,     5,      1.0,     50.0,      25.0,       0},
+    {0,     5,      1.0,    100.0,       0.0,       1},
+    {0,     5,      1.0,    100.0,      20.0,       1}
+};
+
+#define MIN_FREQ_SETTING 0.01    // Minimum frequency setting
+#define MAX_FREQ_SETTING 100.0  // Maximum frequency setting
+
+const int buttonPin = 7; // Pin for the button
+
+int selectedFlutter = 0; // Default selected flutter option
+unsigned long timePoints[5] = {0, 1, 500000, 500001, 999999}; // Time points for the five phases of the cycle (last value is end of cycle)
+unsigned long cycleTimeCurent = 0; // Current time in the cycle
+unsigned long cycleTimeStart = 0; // Last time the lights were updated
 
 void showWelcomeScreen() {
     Serial.println("\n================================");
@@ -44,6 +85,7 @@ void showHelpScreen() {
     Serial.println(" H* - Show this help menu");
     Serial.println(" S* - Show current PWM status");
     Serial.println(" B<bank>* - Load a bank of values");
+    Serial.println(" F<flutter>* - Set flutter parameters");
     Serial.println("----------------------------");
     Serial.println("Channels used: 3, 4, 5, 6, 9, 10, 20, 21, 22, 23, 25, 32");
     Serial.println("Bit depth affects duty cycle range (e.g., 8-bit: 0-255, 12-bit: 0-4095)");
@@ -99,6 +141,41 @@ void setPWMDutyCycle(int channel, int value) {
     }
 }
 
+void limitFlutterParameters() {
+    // TODO: Implement a function to limit the flutter parameters
+    // This function should ensure that the values in flutterParams are within acceptable ranges
+    for (int i = 0; i < NUM_OPTIONS; i++) {
+        flutterParams[i][0] = constrain(flutterParams[i][0], 0, NUM_SLOTS - 1); // Light setting 1
+        flutterParams[i][1] = constrain(flutterParams[i][1], 0, NUM_SLOTS - 1); // Light setting 2
+        flutterParams[i][2] = constrain(flutterParams[i][2], MIN_FREQ_SETTING, MAX_FREQ_SETTING); // Frequency
+        flutterParams[i][3] = constrain(flutterParams[i][3], 0, 100); // Duty cycle
+        if (flutterParams[i][3] < 50) {
+            flutterParams[i][4] = constrain(flutterParams[i][4], 0, flutterParams[i][3]); // Transition part of duty cycle
+        } else {
+            flutterParams[i][4] = constrain(flutterParams[i][4], 0, 100 - flutterParams[i][3]); // Transition part of duty cycle
+        }
+        flutterParams[i][5] = constrain(flutterParams[i][5], 0, 1); // Transition type (0: linear, 1: sine)
+    }
+}
+
+void updateFlutterTimePoints() {
+    timePoints[0] = 0;                                                                          // Start of the cycle (maybe usefull later in development to change)
+    timePoints[4] = (1000000 / flutterParams[selectedFlutter][2])-1;                            // Length of the cycle (1e6 / frequency)
+    timePoints[2] = timePoints[4] * flutterParams[selectedFlutter][3] / 100.0;                  // End of ON phase
+    timePoints[1] = timePoints[0] + timePoints[2] * flutterParams[selectedFlutter][4] / 100.0;  // End of the FIRST  transition
+    timePoints[3] = timePoints[2] + timePoints[2] * flutterParams[selectedFlutter][4] / 100.0;  // End of the SECOND transition
+    
+    Serial.println("-Flutter--------------------------------------");
+    Serial.printf("  Selected flutter: %d\n", selectedFlutter);
+    Serial.printf("           Light 1: %d\n", (int)flutterParams[selectedFlutter][0]);
+    Serial.printf("           Light 2: %d\n", (int)flutterParams[selectedFlutter][1]);
+    Serial.printf("         Frequency: %3.1f\n", flutterParams[selectedFlutter][2]);
+    Serial.printf("        Duty cycle: %3.1f\n", flutterParams[selectedFlutter][3]);
+    Serial.printf("   Transition part: %3.1f\n", flutterParams[selectedFlutter][4]);
+    Serial.printf("   Transition mode: %d\n", flutterParams[selectedFlutter][5]);
+    Serial.printf("  Time points [us]: %lu, %lu, %lu, %lu, %lu\n", timePoints[0], timePoints[1], timePoints[2], timePoints[3], timePoints[4]);
+}
+
 void parseSerialCommand(String command) {
     if (command.startsWith("C")) { // Set PWM: C<channel>,<value>*
         int commaIndex = command.indexOf(',');
@@ -117,14 +194,20 @@ void parseSerialCommand(String command) {
     } else if (command.startsWith("S")) { // Show status: S*
         showStatus();
     } else if (command.startsWith("B")) { // Load bank: B<value>*
-      int tempBankLine = constrain(command.substring(1).toInt(), 0, NUM_SLOTS-1);
-      Serial.printf(" Bank selected: %d\n", tempBankLine);
-      for (int i = 0; i < NUM_CHANNELS; i++) {
-        setPWMDutyCycle(i, pwmBank[tempBankLine][i]);
-      }
-      showStatus();
-  }
-}
+        int tempBankLine = constrain(command.substring(1).toInt(), 0, NUM_SLOTS-1);
+        Serial.printf(" Bank selected: %d\n", tempBankLine);
+        for (int i = 0; i < NUM_CHANNELS; i++) {
+            setPWMDutyCycle(i, pwmBank[tempBankLine][i]);
+        }
+        showStatus();
+    } else if (command.startsWith("F")) { // Flutter part
+        selectedFlutter = constrain(command.substring(1).toInt(), 0, NUM_OPTIONS-1);
+        for (int i = 0; i < NUM_CHANNELS; i++) {
+            setPWMDutyCycle(i, pwmBank[0][i]);
+        }
+        updateFlutterTimePoints();
+    }
+ }
 
 void processSerialInput() {
     static String inputString = "";
@@ -139,14 +222,78 @@ void processSerialInput() {
     }
 }
 
+void updateLights() {
+    unsigned long transitionTime = 0;
+    float transitionProgress = 0;
+    float transitionValue = 0;
+    // Continue here with the logic for updating the lights based on the time points and flutter parameters
+    cycleTimeCurent = micros() - cycleTimeStart;
+
+    if( cycleTimeCurent > timePoints[4] ) { // End of cycle reacher, reset the cycle
+        cycleTimeStart = micros();
+        cycleTimeCurent = 0;
+    }
+
+    if (cycleTimeCurent < timePoints[0]) { // Pre-cycle time
+        transitionProgress = 0;
+    } else if (cycleTimeCurent < timePoints[1]) { // First transition
+        transitionTime = timePoints[1] - timePoints[0];
+        transitionProgress = (float)(cycleTimeCurent - timePoints[0]) / transitionTime;
+    } else if (cycleTimeCurent < timePoints[2]) {
+        transitionProgress = 1;
+    } else if (cycleTimeCurent < timePoints[3]) {
+        transitionTime = timePoints[3] - timePoints[2];
+        transitionProgress = 1.0 - ((float)(cycleTimeCurent - timePoints[2]) / transitionTime);
+    } else {
+        transitionProgress = 0;
+    }
+
+    // Once we have the transitionProgress value calculate PWM and set it
+    if(flutterParams[selectedFlutter][5] == 0) { // Linear transition
+        transitionValue = transitionProgress;
+    } else if (flutterParams[selectedFlutter][5] == 1) { // Sine transition
+        transitionValue = 0.5 * (1 - cos(transitionProgress * PI)); // Sine transition
+    }
+    for (int i = 0; i < NUM_CHANNELS; i++) {
+        int val1 = pwmBank[(int)flutterParams[selectedFlutter][0]][i];
+        int val2 = pwmBank[(int)flutterParams[selectedFlutter][1]][i];
+        setPWMDutyCycle(i, int(val1 + (val2 - val1) * transitionValue));
+    }
+}
+
+void checkButtonAndCycleFlutter() {
+
+    if (digitalRead(buttonPin) == HIGH) { // Button is pressed and was not already detected
+        // Increment selectedFlutter and loop back to 0 if it exceeds the max value
+        selectedFlutter = (selectedFlutter + 1) % NUM_OPTIONS;
+
+        // Update the flutter time points for the new selection
+        for (int i = 0; i < NUM_CHANNELS; i++) {
+            setPWMDutyCycle(i, pwmBank[0][i]);
+        }
+        updateFlutterTimePoints();
+
+        // Print the new selected flutter for debugging
+        Serial.printf("Button pressed! Cycling to selectedFlutter: %d\n", selectedFlutter);
+
+        while( digitalRead(buttonPin) == HIGH) { delay(10); } // Wait for button release;
+    }
+}
+
 void setupPWM() {
     Serial.begin(115200);
     showWelcomeScreen();
     setPWMResolution(pwmResolution);
+    limitFlutterParameters();
+    pinMode(buttonPin, INPUT); // Set button pin as input
 }
 
 void loopPWM() {
     processSerialInput();
+    checkButtonAndCycleFlutter(); // Check button state and cycle through flutter options
+    if(selectedFlutter > 0) { // If flutter is active
+        updateLights();
+    }
 }
 
 void setup() {
