@@ -7,7 +7,6 @@
 // TODO: The 8 switches should connect to GND as they are INPUT_PULLUP
 // TODO: Add a set command for adjusting the PWM of each channels for calib with MATLAB setXXYYYY* to set the value of channel XX to YYYY
 
-
 #ifndef MAIN_H
 #define MAIN_H
 
@@ -64,8 +63,9 @@ float flutterParams[NUM_OPTIONS][6] = {
 
 const int buttonPin = 7; // Pin for the button
 
-#define NUM_SWITCHES 8 // Define the number of switches being used (can be adjusted)
-const int switchPins[8] = {0, 1, 2, 8, 11, 12, 13, 14}; // Pins for the 8 switches
+#define NUM_SWITCHES 6 // Define the number of switches being used (can be adjusted)
+const int switchPins[8] = {0, 1, 2, 8, 11, 12, 15, 14}; // Pins for the 8 switches
+bool switchesInUse = false; // Flag to indicate if switches are in use
 
 int selectedFlutter = 0; // Default selected flutter option
 unsigned long timePoints[5] = {0, 1, 500000, 500001, 999999}; // Time points for the five phases of the cycle (last value is end of cycle)
@@ -174,6 +174,15 @@ void updateFlutterTimePoints() {
     timePoints[1] = timePoints[0] + timePoints[2] * flutterParams[selectedFlutter][4] / 100.0;  // End of the FIRST  transition
     timePoints[3] = timePoints[2] + timePoints[2] * flutterParams[selectedFlutter][4] / 100.0;  // End of the SECOND transition
     
+    // Ensure time points are in increasing order
+    for (int i = 0; i < 4; i++) {
+        if (timePoints[i] >= timePoints[i + 1]) {
+            timePoints[i + 1] = timePoints[i] + 1; // Ensure increasing order
+        }
+    }
+}
+
+void reportFlutterParameters() {
     Serial.println("-Flutter--------------------------------------");
     Serial.printf("  Selected flutter: %d\n", selectedFlutter);
     Serial.printf("           Light 1: %d\n", (int)flutterParams[selectedFlutter][0]);
@@ -212,6 +221,7 @@ void parseSerialCommand(String command) {
     } else if (command.startsWith("F")) { // Flutter part
         selectedFlutter = constrain(command.substring(1).toInt(), 0, NUM_OPTIONS-1);
         updateFlutterTimePoints();
+        reportFlutterParameters();
     } else if (command.startsWith("set")) { // Set PWM for a specific channel: setXXYYYY*
         int channel = command.substring(3, 5).toInt(); // Extract channel number (XX)
         int value = command.substring(5).toInt();   // Extract PWM value (YYYY)
@@ -276,6 +286,7 @@ void checkButtonAndCycleFlutter() {
     if (digitalRead(buttonPin) == HIGH) { // Button is pressed and was not already detected
         selectedFlutter = (selectedFlutter + 1) % NUM_OPTIONS;  // Increment selectedFlutter and loop back to 0 if it exceeds the max value
         updateFlutterTimePoints();                              // Update the flutter time points for the new selection
+        reportFlutterParameters();
         while( digitalRead(buttonPin) == HIGH) { delay(10); }   // Wait for button release;
     }
 }
@@ -290,6 +301,20 @@ int readSwitches() {
     }
 
     return value; // Return the encoded value (0–255)
+}
+
+String getBinaryValue(int value, int numBits, char offChar = '_', char onChar = 'X') {
+    String binaryString = ""; // Initialize an empty string to hold the binary representation
+
+    for (int i = numBits - 1; i >= 0; i--) { // Iterate from the most significant bit to the least significant bit
+        if (value & (1 << i)) { // Check if the i-th bit is set
+            binaryString += onChar; // Append the character for bit value 1
+        } else {
+            binaryString += offChar; // Append the character for bit value 0
+        }
+    }
+
+    return binaryString; // Return the binary representation as a string
 }
 
 void setupPWM() {
@@ -310,15 +335,23 @@ void loopPWM() {
     processSerialInput();
     // checkButtonAndCycleFlutter(); // Check button state and cycle through flutter options
 
-    /*
     int switchValue = readSwitches(); // Get the encoded value from the switches
-    if (switchValue != selectedFlutter) { // Update only if the value has changed
-        selectedFlutter = switchValue; // Set selectedFlutter to the encoded value
-        updateFlutterTimePoints(); // Update the flutter time points
-        Serial.printf("Switches encoded value: %d\n", selectedFlutter);
+    if (switchValue != 0) { // If no switches are pressed --> skip
+        switchesInUse = true;
+        if (switchValue != selectedFlutter) { // Update only if the value has changed
+            selectedFlutter = switchValue; // Set selectedFlutter to the encoded value
+            updateFlutterTimePoints(); // Update the flutter time points
+            Serial.printf("Switches encoded value: %3d %s\n", selectedFlutter, getBinaryValue(selectedFlutter, NUM_SWITCHES).c_str());
+        }
+    } else {
+        if (switchesInUse) { // If switches were in use and now are not
+            switchesInUse = false; // Reset the flag
+            selectedFlutter = 0; // Reset selectedFlutter if no switches are pressed
+            updateFlutterTimePoints();
+            Serial.printf("Switches encoded value: %3d %s\n", selectedFlutter, getBinaryValue(selectedFlutter, NUM_SWITCHES).c_str());
+        }
     }
-    */
-
+    
     if(selectedFlutter > 0) { // If flutter is active
         updateLights();
     }
