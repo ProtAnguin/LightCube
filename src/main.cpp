@@ -12,25 +12,21 @@
 
 #include <Arduino.h>
 
-#define NUM_CHANNELS 12
-const int pwmPins[NUM_CHANNELS] = {  4,   5,   9,  25,   6,  20,  22,  21,  23,  10,   3,  32}; // PWM-capable pins
-const int ledWls[NUM_CHANNELS]  = {363, 369, 393, 400, 422, 435, 453, 471, 491, 514, 540, 632}; // WLS
+#define NUM_CHANNELS 3
+const int pwmPins[NUM_CHANNELS] = {  4,   5,   9}; // PWM-capable pins
+const int ledWls[NUM_CHANNELS]  = {363, 630, 631}; // WLS
 
 int pwmValues[NUM_CHANNELS] = {0}; // Start with 0% duty cycle
 int pwmFrequency = 500; // Default PWM frequency in Hz
 int pwmResolution = 12; // Default bit resolution (user-definable)
 
-const int NUM_SLOTS = 9;
+const int NUM_SLOTS = 5;
 int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
-  {   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0},
-  {1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023},
-  {2047, 2047, 2047, 2047, 2047, 2047, 2047, 2047, 2047, 2047, 2047, 2047},
-  {3071, 3071, 3071, 3071, 3071, 3071, 3071, 3071, 3071, 3071, 3071, 3071},
-  {4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095, 4095},
-  {4095,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 4095},
-  {   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0},
-  {   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 4095},
-  {   0,    0,    0,    0,    0,    0,    0, 4095,    0, 4095,    0,    0}
+  {   0,    0,    0},
+  {4095,    0,    0},
+  {   0, 4095, 4095},
+  {3071, 3071, 3071},
+  {4095, 4095, 4095}
 };
 
 // flutterParams holds the control values for switching between pwmBanks with a particular transition
@@ -40,22 +36,11 @@ int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
 // Position 3: duty cycle
 // Position 4: part of duty cycle for transitions
 // Position 5: type of transition (0: linear, 1: sine)
-const int NUM_OPTIONS = 14;
+const int NUM_OPTIONS = 3;
 float flutterParams[NUM_OPTIONS][6] = {
     {0,     0,      1.0,     20.0,       0.0,       0},
-    {0,     5,      1.0,     20.0,       0.0,       0},
-    {0,     5,      1.0,     40.0,      20.0,       0},
-    {0,     5,      1.0,     60.0,      20.0,       1},
-    {0,     5,      0.4,     50.0,      50.0,       1},
-    {0,     8,      0.4,     50.0,      50.0,       1},
-    {5,     8,      0.4,     50.0,      50.0,       1},
-    {5,     7,      0.4,     50.0,      50.0,       1},
-    {0,     5,      1.0,     30.0,      30.0,       1},
-    {0,     5,      2.0,     30.0,      30.0,       1},
-    {0,     5,      4.0,     30.0,      30.0,       1},
-    {1,     5,      1.0,     50.0,      25.0,       0},
-    {0,     5,      1.0,    100.0,       0.0,       1},
-    {0,     5,      1.0,    100.0,      20.0,       1}
+    {1,     2,      1.0,     20.0,       0.0,       0},
+    {0,     5,      1.0,     40.0,      20.0,       0}
 };
 
 #define MIN_FREQ_SETTING 0.01    // Minimum frequency setting
@@ -91,7 +76,6 @@ void showHelpScreen() {
     Serial.println(" B<bank>* - Load a bank of values");
     Serial.println(" F<flutter>* - Set flutter parameters");
     Serial.println("----------------------------");
-    Serial.println("Channels used: 3, 4, 5, 6, 9, 10, 20, 21, 22, 23, 25, 32");
     Serial.println("Bit depth affects duty cycle range (e.g., 8-bit: 0-255, 12-bit: 0-4095)");
     Serial.println("Changing bit depth resets all duty cycles to 0");
     Serial.println("============================\n");
