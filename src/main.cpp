@@ -63,7 +63,7 @@ float flutterParams[NUM_OPTIONS][6] = {
 
 const int buttonPin = 7; // Pin for the button
 
-#define NUM_SWITCHES 6 // Define the number of switches being used (can be adjusted)
+#define NUM_SWITCHES 6 // Define the number of switches being used for protocol selection (can be adjusted)
 const int switchPins[8] = {0, 1, 2, 8, 11, 12, 15, 14}; // Pins for the 8 switches
 bool switchesInUse = false; // Flag to indicate if switches are in use
 
