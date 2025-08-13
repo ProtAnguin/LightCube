@@ -10,28 +10,55 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+#include <hardware/clocks.h>
 #include <Arduino.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Bounce2.h>
 
-#define NUM_CHANNELS 12
-const int pwmPins[NUM_CHANNELS] = {  4,   5,   9,  25,   6,  20,  22,  21,  23,  10,   3,  32}; // PWM-capable pins
-const int ledWls[NUM_CHANNELS]  = {363, 369, 393, 400, 422, 435, 453, 471, 491, 514, 540, 632}; // WLS
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET   -1           // Most I2C modules don’t expose reset; use -1
+#define OLED_ADDR    0x3C         // Common SSD1306 I2C address (sometimes 0x3D)
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+const int BTN_UP_PIN = 14;    // Button to increase the selected flutter option
+const int BTN_DW_PIN = 15;  // Button to decrease the selected flutter option
+
+#define BTN_DEBOUNCE_INTERVAL_MS 50 // Debounce interval for buttons in milliseconds
+
+Bounce btnU;
+Bounce btnD;
+
+// helpers
+static inline int wrap_inc(int v, int n) {        // (v+1) % n
+  v++; if (v >= n) v = 0; return v;
+}
+static inline int wrap_dec(int v, int n) {        // (v-1+n) % n without negatives
+  v--; if (v < 0) v = n - 1; return v;
+}
+
+#define NUM_CHANNELS 3
+const int pwmPins[NUM_CHANNELS] = { 18,  19,  20}; // PWM-capable pins
+const int ledWls[NUM_CHANNELS]  = {363, 369, 393}; // WLS
 
 int pwmValues[NUM_CHANNELS] = {0}; // Start with 0% duty cycle
 int pwmFrequency = 500; // Default PWM frequency in Hz
-int pwmResolution = 12; // Default bit resolution (user-definable)
+int pwmResolution = 14; // Default bit resolution (user-definable)
 
-const int NUM_SLOTS = 9;
+const int NUM_SLOTS = 8; 
 int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
-//  363,  369,  393,  400,  422,  435,  453,  471,  491,  514,  540,  632
-  {   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0},
-  { 687,  421,  513,  277,  487,  339,  498,  623,  714,  379, 1646,   95}, // Helenor flat      no  polarizer
-  { 422,  225,  221,  311,  323,  288,  425,  528,  435,  543, 1646,    0}, // Helenor forest    no  polarizer
-  { 344,  217,  210,  335,  367,  344,  541,  674,  689,  432, 1646,   56}, // Helenor highnoon  no  polarizer
-  { 866,  486,  474,  685,  723,  643,  973, 1115, 1087,  754, 1646,  185}, // Helenor morning   no  polarizer
-  {3226, 1867, 1747,  866, 1381,  905, 1311, 1616, 1809,  964, 4095,  264}, // Helenor flat     with polarizer
-  {1984,  999,  753,  972,  918,  768, 1118, 1371, 1102, 1382, 4095,    0}, // Helenor forest   with polarizer
-  {1616,  964,  714, 1049, 1041,  917, 1424, 1749, 1746, 1099, 4095,  155}, // Helenor highnoon with polarizer
-  {4069, 2156, 1614, 2140, 2051, 1716, 2562, 2894, 2754, 1917, 4095,  510}  // Helenor morning  with polarizer
+//  363,  369,  393
+  {   0,    0,    0},
+  {4095,    0,    0},
+  {   0, 4095,    0},
+  {4095, 4095,    0},
+  {   0,    0, 4095},
+  {4095,    0, 4095},
+  {   0, 4095, 4095},
+  {4095, 4095, 4095}
 };
 
 // flutterParams holds the control values for switching between pwmBanks with a particular transition
@@ -41,7 +68,7 @@ int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
 // Position 3: duty cycle
 // Position 4: part of duty cycle for transitions
 // Position 5: type of transition (0: linear, 1: sine)
-const int NUM_OPTIONS = 9;
+const int NUM_OPTIONS = 35;
 float flutterParams[NUM_OPTIONS][6] = {
     { 0,     0,      0.4,     50.0,      20.0,       1},
     { 0,     1,      0.4,     50.0,      20.0,       1},
@@ -51,16 +78,44 @@ float flutterParams[NUM_OPTIONS][6] = {
     { 0,     5,      0.4,     50.0,      20.0,       1},
     { 0,     6,      0.4,     50.0,      20.0,       1},
     { 0,     7,      0.4,     50.0,      20.0,       1},
-    { 0,     8,      0.4,     50.0,      20.0,       1}
+    { 2,     5,      1.0,     50.0,      50.0,       1},
+    { 1,     4,      5.0,     50.0,     100.0,       1},
+    { 1,     4,     10.0,     50.0,     100.0,       1},
+    { 1,     4,     15.0,     50.0,     100.0,       1},
+    { 1,     4,     20.0,     50.0,     100.0,       1},
+    { 1,     4,     25.0,     50.0,     100.0,       1},
+    { 1,     4,     30.0,     50.0,     100.0,       1},
+    { 1,     4,     35.0,     50.0,     100.0,       1},
+    { 1,     4,     40.0,     50.0,     100.0,       1},
+    { 1,     4,     45.0,     50.0,     100.0,       1},
+    { 1,     4,     50.0,     50.0,     100.0,       1},
+    { 1,     4,     55.0,     50.0,     100.0,       1},
+    { 1,     4,     60.0,     50.0,     100.0,       1},
+    { 1,     4,     65.0,     50.0,     100.0,       1},
+    { 1,     4,     70.0,     50.0,     100.0,       1},
+    { 1,     4,     75.0,     50.0,     100.0,       1},
+    { 1,     4,     80.0,     50.0,     100.0,       1},
+    { 1,     4,     85.0,     50.0,     100.0,       1}
+};
+
+#define DESC_MAX_LEN 32
+char flutterDescriptions[NUM_OPTIONS][DESC_MAX_LEN] = {
+    "Off", 
+    "One light slow", 
+    "Two lights slow", 
+    "All lights fade", 
+    "Pattern A", 
+    "Pattern B", 
+    "Pattern C", 
+    "Pattern D", 
+    "Pulse mode", 
+    "Alt flash",
+    "Epileptic flash"
 };
 
 #define MIN_FREQ_SETTING 0.01    // Minimum frequency setting
 #define MAX_FREQ_SETTING 100.0  // Maximum frequency setting
 
-const int buttonPin = 7; // Pin for the button
-
-#define NUM_SWITCHES 6 // Define the number of switches being used for protocol selection (can be adjusted)
-const int switchPins[8] = {0, 1, 2, 8, 11, 12, 15, 14}; // Pins for the 8 switches
 bool switchesInUse = false; // Flag to indicate if switches are in use
 
 int selectedFlutter = 0; // Default selected flutter option
@@ -69,11 +124,11 @@ unsigned long cycleTimeCurent = 0; // Current time in the cycle
 unsigned long cycleTimeStart = 0; // Last time the lights were updated
 
 void showWelcomeScreen() {
-    Serial.println("\n================================");
-    Serial.println(" PWM Controller for Teensy 3.2 ");
-    Serial.println("================================");
+    Serial.println("\n========================================");
+    Serial.println(" PWM Controller for Raspberry Pi Pico 2");
+    Serial.println("========================================");
     Serial.println(" Type 'H*' for help.");
-    Serial.println("================================\n");
+    Serial.println("========================================\n");
 }
 
 void showHelpScreen() {
@@ -97,7 +152,6 @@ void showStatus() {
     int maxPWMValue = (1 << pwmResolution) - 1; // Maximum PWM value based on resolution
     Serial.println("\n========= PWM STATUS =========");
     Serial.printf("CPU Speed: %lu Hz\n", F_CPU);
-    Serial.printf("Bus Speed: %lu Hz\n", F_BUS);
     Serial.printf("Bit Depth: %d-bit\n", pwmResolution);
     Serial.printf("Current PWM Frequency: %d Hz\n", pwmFrequency);
     Serial.printf("Maximum Possible PWM Value: %d\n", maxPWMValue); // Report the maximum PWM value
@@ -110,12 +164,19 @@ void showStatus() {
 }
 
 void updatePWMSettings() {
-    uint32_t busSpeed = F_BUS; // Get F_BUS clock speed
-    pwmFrequency = busSpeed / (1 << pwmResolution); // Adjust calculation using F_BUS
-    for (int i = 0; i < NUM_CHANNELS; i++) {
-        analogWriteFrequency(pwmPins[i], pwmFrequency);
-        analogWrite(pwmPins[i], 0); // Reset duty cycle to 0%
-    }
+  uint32_t sysHz = clock_get_hz(clk_sys);
+  // Keep your existing relationship between clock and PWM freq:
+  // freq = clock / 2^resolution
+  pwmFrequency = sysHz / (1u << pwmResolution);
+
+  // Arduino-Pico: set freq once, globally; then set the duty "range"/resolution
+  analogWriteFreq(pwmFrequency);                   // global PWM frequency
+  analogWriteRange((1u << pwmResolution) - 1u);    // duty steps = 2^resolution - 1
+
+  for (int i = 0; i < NUM_CHANNELS; i++) {
+    pinMode(pwmPins[i], OUTPUT);
+    analogWrite(pwmPins[i], 0); // Reset duty to 0% in the new range
+  }
 }
 
 void setPWMResolution(int resolution) {
@@ -178,6 +239,52 @@ void updateFlutterTimePoints() {
     }
 }
 
+void updateDisplay() {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+  
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println(flutterDescriptions[selectedFlutter]);
+  
+  display.setTextSize(7);
+  char bufProg[4];  // enough for "99\0"
+  sprintf(bufProg, "%2d", selectedFlutter);  // right-align in 2 spaces
+  display.println(bufProg);
+
+  display.setTextSize(1);
+  uint8_t Hofs = 86;
+  uint8_t Vofs = 9;
+  uint8_t curLine = 1;
+  char buf[32];
+
+  display.setCursor(Hofs, curLine++*Vofs);
+  sprintf(buf, "A: %4d", (int)flutterParams[selectedFlutter][0]);
+  display.print(buf);
+
+  display.setCursor(Hofs, curLine++*Vofs);
+  sprintf(buf, "B: %4d", (int)flutterParams[selectedFlutter][1]);
+  display.print(buf);
+
+  display.setCursor(Hofs, curLine++*Vofs);
+  sprintf(buf, "F: %4.1f", (float)flutterParams[selectedFlutter][2]);
+  display.print(buf);
+
+  display.setCursor(Hofs, curLine++*Vofs);
+  sprintf(buf, "D: %4.1f", (float)flutterParams[selectedFlutter][3]);
+  display.print(buf);
+
+  display.setCursor(Hofs, curLine++*Vofs);
+  sprintf(buf, "P: %4.1f", (float)flutterParams[selectedFlutter][4]);
+  display.print(buf);
+
+  display.setCursor(Hofs, curLine++*Vofs);
+  sprintf(buf, "M: %4d", (int)flutterParams[selectedFlutter][5]);
+  display.print(buf);
+  
+  display.display(); // Push buffer to screen
+}
+
 void reportFlutterParameters() {
     Serial.println("-Flutter--------------------------------------");
     Serial.printf("  Selected flutter: %d\n", selectedFlutter);
@@ -188,6 +295,8 @@ void reportFlutterParameters() {
     Serial.printf("   Transition part: %3.1f\n", flutterParams[selectedFlutter][4]);
     Serial.printf("   Transition mode: %d\n", flutterParams[selectedFlutter][5]);
     Serial.printf("  Time points [us]: %lu, %lu, %lu, %lu, %lu\n", timePoints[0], timePoints[1], timePoints[2], timePoints[3], timePoints[4]);
+
+    updateDisplay();
 }
 
 void parseSerialCommand(String command) {
@@ -278,26 +387,26 @@ void updateLights() {
 }
 
 void checkButtonAndCycleFlutter() {
+    btnU.update();
+    btnD.update();
 
-    if (digitalRead(buttonPin) == HIGH) { // Button is pressed and was not already detected
-        selectedFlutter = (selectedFlutter + 1) % NUM_OPTIONS;  // Increment selectedFlutter and loop back to 0 if it exceeds the max value
-        updateFlutterTimePoints();                              // Update the flutter time points for the new selection
+    bool changed = false;
+
+    if (btnU.fell()) { // LOW->HIGH: pressed (pulldown wiring)
+        selectedFlutter = wrap_inc(selectedFlutter, NUM_OPTIONS);
+        changed = true;
+    }
+    if (btnD.fell()) { // LOW->HIGH: pressed
+        selectedFlutter = wrap_dec(selectedFlutter, NUM_OPTIONS);
+        changed = true;
+    }
+
+    if (changed) {
+        updateFlutterTimePoints();
         reportFlutterParameters();
-        while( digitalRead(buttonPin) == HIGH) { delay(10); }   // Wait for button release;
     }
 }
 
-int readSwitches() {
-    int value = 0; // Initialize the encoded value to 0
-
-    for (int i = 0; i < NUM_SWITCHES; i++) {
-        if (digitalRead(switchPins[i]) == LOW) { // Check if the switch is pressed (LOW due to INPUT_PULLUP)
-            value |= (1 << i); // Set the corresponding bit in the value
-        }
-    }
-
-    return value; // Return the encoded value (0–255)
-}
 
 String getBinaryValue(int value, int numBits, char offChar = '_', char onChar = 'X') {
     String binaryString = ""; // Initialize an empty string to hold the binary representation
@@ -313,40 +422,40 @@ String getBinaryValue(int value, int numBits, char offChar = '_', char onChar = 
     return binaryString; // Return the binary representation as a string
 }
 
+void setupDisplay() {
+    Wire.begin();
+
+    if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
+        Serial.println("SSD1306 init failed. Check wiring/address.");
+        for (;;);
+    }
+
+    display.clearDisplay();
+    
+    updateDisplay(); // Initial display update
+}
+
+void setupButtons() {
+  pinMode(BTN_UP_PIN, INPUT_PULLUP);
+  pinMode(BTN_DW_PIN, INPUT_PULLUP);
+
+  btnU.attach(BTN_UP_PIN);   // no mode here; we already set it
+  btnD.attach(BTN_DW_PIN);
+
+  btnU.interval(BTN_DEBOUNCE_INTERVAL_MS);
+  btnD.interval(BTN_DEBOUNCE_INTERVAL_MS);
+}
+
 void setupPWM() {
     Serial.begin(115200);
     showWelcomeScreen();
     setPWMResolution(pwmResolution);
     limitFlutterParameters();
-
-    pinMode(buttonPin, INPUT); // Set button pin as input
-
-    // Configure switch pins as inputs with pull-up resistors
-    for (int i = 0; i < NUM_SWITCHES; i++) {
-        pinMode(switchPins[i], INPUT_PULLUP);
-    }
 }
 
 void loopPWM() {
     processSerialInput();
-    // checkButtonAndCycleFlutter(); // Check button state and cycle through flutter options
-
-    int switchValue = readSwitches(); // Get the encoded value from the switches
-    if (switchValue != 0) { // If no switches are pressed --> skip
-        switchesInUse = true;
-        if (switchValue != selectedFlutter) { // Update only if the value has changed
-            selectedFlutter = switchValue; // Set selectedFlutter to the encoded value
-            updateFlutterTimePoints(); // Update the flutter time points
-            Serial.printf("Switches encoded value: %3d %s\n", selectedFlutter, getBinaryValue(selectedFlutter, NUM_SWITCHES).c_str());
-        }
-    } else {
-        if (switchesInUse) { // If switches were in use and now are not
-            switchesInUse = false; // Reset the flag
-            selectedFlutter = 0; // Reset selectedFlutter if no switches are pressed
-            updateFlutterTimePoints();
-            Serial.printf("Switches encoded value: %3d %s\n", selectedFlutter, getBinaryValue(selectedFlutter, NUM_SWITCHES).c_str());
-        }
-    }
+    checkButtonAndCycleFlutter(); // Check button state and cycle through flutter options
     
     if(selectedFlutter > 0) { // If flutter is active
         updateLights();
@@ -355,6 +464,8 @@ void loopPWM() {
 
 void setup() {
     setupPWM();
+    setupButtons();
+    setupDisplay();
 }
 
 void loop() {
