@@ -1,11 +1,4 @@
-// TODO: Serial port timeout from Lucy
-// TODO: Print complete bank
-// TODO: Reorder pwmPins and ledWls to have LEDs in ascending order
-// TODO: Solder channels 25 and 32
-// TODO: Make light flicker at some F, think about the steepness of the transition
-// TODO: timePoints have to be at least increasing by 1 to avoid division by zero
-// TODO: The 8 switches should connect to GND as they are INPUT_PULLUP
-// TODO: Add a set command for adjusting the PWM of each channels for calib with MATLAB setXXYYYY* to set the value of channel XX to YYYY
+// Display dim timeout 5 seconds (adjustable in code), pressing a button just wakes the display up without changing phe program on the first click.
 
 #ifndef MAIN_H
 #define MAIN_H
@@ -23,6 +16,14 @@
 #define OLED_ADDR    0x3C         // Common SSD1306 I2C address (sometimes 0x3D)
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+const unsigned DISPLAY_IDLE_MS = 5000;   // <- adjust as you like
+static unsigned long lastActivityMs = 0;
+static bool displayDimmed = false;
+
+inline void markActivity() {
+  lastActivityMs = millis();
+}
 
 const int BTN_UP_PIN = 14;    // Button to increase the selected flutter option
 const int BTN_DW_PIN = 15;  // Button to decrease the selected flutter option
@@ -285,6 +286,22 @@ void updateDisplay() {
   display.display(); // Push buffer to screen
 }
 
+void wakeDisplay() {
+  if (displayDimmed) {
+    display.dim(false);     // undim
+    displayDimmed = false;
+    updateDisplay();        // redraw at normal brightness
+  }
+  markActivity();
+}
+
+void maybeDimDisplay() {
+  if (!displayDimmed && (millis() - lastActivityMs >= DISPLAY_IDLE_MS)) {
+    display.dim(true);      // lower brightness (keeps pixels; gentle on OLED)
+    displayDimmed = true;
+  }
+}
+
 void reportFlutterParameters() {
     Serial.println("-Flutter--------------------------------------");
     Serial.printf("  Selected flutter: %d\n", selectedFlutter);
@@ -335,16 +352,17 @@ void parseSerialCommand(String command) {
  }
 
 void processSerialInput() {
-    static String inputString = "";
-    while (Serial.available()) {
-        char inChar = Serial.read();
-        if (inChar == '*') {
-            parseSerialCommand(inputString);
-            inputString = "";
-        } else {
-            inputString += inChar;
-        }
+  static String inputString = "";
+  while (Serial.available()) {
+    markActivity();
+    char inChar = Serial.read();
+    if (inChar == '*') {
+        parseSerialCommand(inputString);
+        inputString = "";
+    } else {
+        inputString += inChar;
     }
+  }
 }
 
 void updateLights() {
@@ -390,6 +408,17 @@ void checkButtonAndCycleFlutter() {
     btnU.update();
     btnD.update();
 
+    // Any activity resets the idle timer
+    if (btnU.changed() || btnD.changed()) {
+      markActivity();
+    }
+
+    // If a press happens while dimmed, just wake and CONSUME the press
+    if (displayDimmed && (btnU.fell() || btnD.fell())) {
+      wakeDisplay();
+      return;  // do not change selectedFlutter on this press
+    }
+
     bool changed = false;
 
     if (btnU.fell()) { // LOW->HIGH: pressed (pulldown wiring)
@@ -433,6 +462,7 @@ void setupDisplay() {
     display.clearDisplay();
     
     updateDisplay(); // Initial display update
+    markActivity();
 }
 
 void setupButtons() {
@@ -460,6 +490,8 @@ void loopPWM() {
     if(selectedFlutter > 0) { // If flutter is active
         updateLights();
     }
+
+    maybeDimDisplay();
 }
 
 void setup() {
