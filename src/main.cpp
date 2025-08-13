@@ -1,5 +1,3 @@
-// Display dim timeout 5 seconds (adjustable in code), pressing a button just wakes the display up without changing phe program on the first click.
-
 #ifndef MAIN_H
 #define MAIN_H
 
