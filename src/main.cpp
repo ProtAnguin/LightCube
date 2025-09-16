@@ -7,6 +7,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Bounce2.h>
+#include "easterFile.h"
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -23,13 +24,36 @@ inline void markActivity() {
   lastActivityMs = millis();
 }
 
-const int BTN_UP_PIN = 14;    // Button to increase the selected flutter option
-const int BTN_DW_PIN = 15;  // Button to decrease the selected flutter option
-
 #define BTN_DEBOUNCE_INTERVAL_MS 50 // Debounce interval for buttons in milliseconds
 
 Bounce btnU;
 Bounce btnD;
+
+// --- Secret combo (simple) ---
+const uint8_t  SECRET_TARGET           = 4;     // number of U+D catches
+const unsigned long SECRET_HOLD_MS     = 300;   // hold U at least this long
+const unsigned long SECRET_TIMEOUT_MS  = 1500;  // after arming, how long to wait for D
+const unsigned long CLICK_MAX_MS       = 250;   // short press window
+
+// Secret progress counter
+static uint8_t secretCount = 0;
+
+// U click/hold tracking
+static bool uDown = false;
+static unsigned long uDownMs = 0;
+
+// "Armed" means: U has been held long enough; waiting for D
+static bool uArmed = false;
+static unsigned long uArmedSince = 0;
+
+// D click tracking and one-shot ignore after combo
+static bool dDown = false;
+static unsigned long dDownMs = 0;
+static bool dIgnoreReleaseOnce = false;
+
+inline void secretMarkLeft()  { display.drawPixel(0,   0, SSD1306_WHITE); display.display(); }
+inline void secretMarkRight() { display.drawPixel(127, 0, SSD1306_WHITE); display.display(); }
+inline void secretClearMarks(){ display.drawPixel(0,0,SSD1306_BLACK); display.drawPixel(127,0,SSD1306_BLACK); display.display(); }
 
 // helpers
 static inline int wrap_inc(int v, int n) {        // (v+1) % n
@@ -39,78 +63,13 @@ static inline int wrap_dec(int v, int n) {        // (v-1+n) % n without negativ
   v--; if (v < 0) v = n - 1; return v;
 }
 
-#define NUM_CHANNELS 3
-const int pwmPins[NUM_CHANNELS] = { 18,  19,  20}; // PWM-capable pins
-const int ledWls[NUM_CHANNELS]  = {363, 369, 393}; // WLS
+// SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE
+#include "LightCube2.h"
+//#include "LightCube3.h"
 
 int pwmValues[NUM_CHANNELS] = {0}; // Start with 0% duty cycle
 int pwmFrequency = 500; // Default PWM frequency in Hz
-int pwmResolution = 14; // Default bit resolution (user-definable)
-
-const int NUM_SLOTS = 8; 
-int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
-//  363,  369,  393
-  {   0,    0,    0},
-  {4095,    0,    0},
-  {   0, 4095,    0},
-  {4095, 4095,    0},
-  {   0,    0, 4095},
-  {4095,    0, 4095},
-  {   0, 4095, 4095},
-  {4095, 4095, 4095}
-};
-
-// flutterParams holds the control values for switching between pwmBanks with a particular transition
-// Position 0: light setting 1
-// Position 1: light setting 2
-// Position 2: frequency [Hz]
-// Position 3: duty cycle
-// Position 4: part of duty cycle for transitions
-// Position 5: type of transition (0: linear, 1: sine)
-const int NUM_OPTIONS = 35;
-float flutterParams[NUM_OPTIONS][6] = {
-    { 0,     0,      0.4,     50.0,      20.0,       1},
-    { 0,     1,      0.4,     50.0,      20.0,       1},
-    { 0,     2,      0.4,     50.0,      20.0,       1},
-    { 0,     3,      0.4,     50.0,      20.0,       1},
-    { 0,     4,      0.4,     50.0,      20.0,       1},
-    { 0,     5,      0.4,     50.0,      20.0,       1},
-    { 0,     6,      0.4,     50.0,      20.0,       1},
-    { 0,     7,      0.4,     50.0,      20.0,       1},
-    { 2,     5,      1.0,     50.0,      50.0,       1},
-    { 1,     4,      5.0,     50.0,     100.0,       1},
-    { 1,     4,     10.0,     50.0,     100.0,       1},
-    { 1,     4,     15.0,     50.0,     100.0,       1},
-    { 1,     4,     20.0,     50.0,     100.0,       1},
-    { 1,     4,     25.0,     50.0,     100.0,       1},
-    { 1,     4,     30.0,     50.0,     100.0,       1},
-    { 1,     4,     35.0,     50.0,     100.0,       1},
-    { 1,     4,     40.0,     50.0,     100.0,       1},
-    { 1,     4,     45.0,     50.0,     100.0,       1},
-    { 1,     4,     50.0,     50.0,     100.0,       1},
-    { 1,     4,     55.0,     50.0,     100.0,       1},
-    { 1,     4,     60.0,     50.0,     100.0,       1},
-    { 1,     4,     65.0,     50.0,     100.0,       1},
-    { 1,     4,     70.0,     50.0,     100.0,       1},
-    { 1,     4,     75.0,     50.0,     100.0,       1},
-    { 1,     4,     80.0,     50.0,     100.0,       1},
-    { 1,     4,     85.0,     50.0,     100.0,       1}
-};
-
-#define DESC_MAX_LEN 32
-char flutterDescriptions[NUM_OPTIONS][DESC_MAX_LEN] = {
-    "Off", 
-    "One light slow", 
-    "Two lights slow", 
-    "All lights fade", 
-    "Pattern A", 
-    "Pattern B", 
-    "Pattern C", 
-    "Pattern D", 
-    "Pulse mode", 
-    "Alt flash",
-    "Epileptic flash"
-};
+int pwmResolution = 16; // Default bit resolution (user-definable)
 
 #define MIN_FREQ_SETTING 0.01    // Minimum frequency setting
 #define MAX_FREQ_SETTING 100.0  // Maximum frequency setting
@@ -403,37 +362,88 @@ void updateLights() {
 }
 
 void checkButtonAndCycleFlutter() {
-    btnU.update();
-    btnD.update();
+  btnU.update();
+  btnD.update();
 
-    // Any activity resets the idle timer
-    if (btnU.changed() || btnD.changed()) {
-      markActivity();
+  if (btnU.changed() || btnD.changed()) markActivity();
+
+  // Wake-on-first-press when dimmed
+  if (displayDimmed && (btnU.fell() || btnD.fell())) { wakeDisplay(); return; }
+
+  // -------- U press / release --------
+  if (btnU.fell()) {
+    uDown = true;
+    uDownMs = millis();
+  }
+
+  // Arm the secret once U has been held long enough
+  if (uDown && !uArmed && (millis() - uDownMs >= SECRET_HOLD_MS)) {
+    uArmed = true;
+    uArmedSince = millis();
+    secretMarkLeft();   // show left pixel
+  }
+
+  // If armed too long without D, time out and clear
+  if (uArmed && (millis() - uArmedSince > SECRET_TIMEOUT_MS)) {
+    uArmed = false;
+    secretClearMarks();
+  }
+
+  if (btnU.rose()) {
+    // If not armed, treat as a normal short click (on release)
+    if (!uArmed && (millis() - uDownMs) <= CLICK_MAX_MS) {
+      selectedFlutter = wrap_inc(selectedFlutter, NUM_OPTIONS);
+      updateFlutterTimePoints();
+      reportFlutterParameters();
     }
-
-    // If a press happens while dimmed, just wake and CONSUME the press
-    if (displayDimmed && (btnU.fell() || btnD.fell())) {
-      wakeDisplay();
-      return;  // do not change selectedFlutter on this press
+    // If armed but never completed with D, just cancel the arm
+    if (uArmed) {
+      uArmed = false;
+      secretClearMarks();
     }
+    uDown = false;
+  }
 
-    bool changed = false;
+  // -------- D press / release --------
+  if (btnD.fell()) {
+    // If U is armed and still held: this is a combo catch
+    if (uArmed && uDown) {
+      secretMarkRight();
+      secretCount++;
+      delay(100);
+      secretClearMarks();
 
-    if (btnU.fell()) { // LOW->HIGH: pressed (pulldown wiring)
-        selectedFlutter = wrap_inc(selectedFlutter, NUM_OPTIONS);
-        changed = true;
+      // Re-arm next round
+      uArmed = false;
+      // Ignore this release as a normal click
+      dIgnoreReleaseOnce = true;
+
+      if (secretCount >= SECRET_TARGET) {
+        draw_easterIm1(display);
+        secretCount = 0;             // allow repeating
+      }
+    } else {
+      // Normal D path: start timing for short/long classification
+      dDown = true;
+      dDownMs = millis();
     }
-    if (btnD.fell()) { // LOW->HIGH: pressed
+  }
+
+  if (btnD.rose()) {
+    if (dIgnoreReleaseOnce) {
+      dIgnoreReleaseOnce = false;    // consume the release after combo
+    } else if (dDown) {
+      unsigned long dt = millis() - dDownMs;
+      if (dt <= CLICK_MAX_MS) {
+        // Normal short click (on release)
         selectedFlutter = wrap_dec(selectedFlutter, NUM_OPTIONS);
-        changed = true;
-    }
-
-    if (changed) {
         updateFlutterTimePoints();
         reportFlutterParameters();
+      }
     }
+    dDown = false;
+  }
 }
-
 
 String getBinaryValue(int value, int numBits, char offChar = '_', char onChar = 'X') {
     String binaryString = ""; // Initialize an empty string to hold the binary representation
