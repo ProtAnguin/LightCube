@@ -357,7 +357,12 @@ void checkButtonAndCycleFlutter() {
   btnU.update();
   btnD.update();
 
-  if (btnU.changed() || btnD.changed()) markActivity();
+  if (btnU.changed() || btnD.changed()) {
+    markActivity();
+  } else {
+    // No button activity; nothing to do
+    return;
+  }
 
   // Wake-on-first-press when dimmed
   if (displayDimmed && (btnU.fell() || btnD.fell())) { wakeDisplay(); return; }
@@ -451,7 +456,7 @@ String getBinaryValue(int value, int numBits, char offChar = '_', char onChar = 
     return binaryString; // Return the binary representation as a string
 }
 
-void flashLight(int flashChannel, int flashDuration_ms) {
+void flashLight(int flashChannel, int flashDuration_ms, int debounceTime_ms) {
   flashChannel--; // Convert to 0-based index
   setPWMDutyCycle(flashChannel, flashPWMValue[flashChannel]); // Set the specified channel to the flash PWM value
   digitalWrite(TTL_OUT_PIN, HIGH); // Set TTL output HIGH
@@ -460,6 +465,8 @@ void flashLight(int flashChannel, int flashDuration_ms) {
   
   setPWMDutyCycle(flashChannel, 0); // Turn off the specified channel
   digitalWrite(TTL_OUT_PIN, LOW); // Set TTL output LOW
+
+  delay(debounceTime_ms-flashDuration_ms); // Debounce delay to avoid multiple triggers
 }
 
 void setupDisplay() {
@@ -509,12 +516,8 @@ void loopPWM() {
 
         if (digitalRead(TTL_IN_PIN) == HIGH || serialTTLordered) {
           serialTTLordered = false;
-          flashLight(selectedFlutter, flashDuration_ms);
+          flashLight(selectedFlutter, flashDuration_ms, TTLdebouceTime_ms);
         }
-        while(digitalRead(TTL_IN_PIN) == HIGH) {
-          delay(1); // Wait for TTL input to go LOW
-        }
-        
     }
 
     //maybeDimDisplay();
