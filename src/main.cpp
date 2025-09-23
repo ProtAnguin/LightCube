@@ -219,29 +219,14 @@ void updateDisplay() {
   uint8_t curLine = 1;
   char buf[32];
 
-  display.setCursor(Hofs, curLine++*Vofs);
-  sprintf(buf, "A: %4d", (int)flutterParams[selectedFlutter][0]);
-  display.print(buf);
-
-  display.setCursor(Hofs, curLine++*Vofs);
-  sprintf(buf, "B: %4d", (int)flutterParams[selectedFlutter][1]);
-  display.print(buf);
-
-  display.setCursor(Hofs, curLine++*Vofs);
-  sprintf(buf, "F: %4.1f", (float)flutterParams[selectedFlutter][2]);
-  display.print(buf);
-
-  display.setCursor(Hofs, curLine++*Vofs);
-  sprintf(buf, "D: %4.1f", (float)flutterParams[selectedFlutter][3]);
-  display.print(buf);
-
-  display.setCursor(Hofs, curLine++*Vofs);
-  sprintf(buf, "P: %4.1f", (float)flutterParams[selectedFlutter][4]);
-  display.print(buf);
-
-  display.setCursor(Hofs, curLine++*Vofs);
-  sprintf(buf, "M: %4d", (int)flutterParams[selectedFlutter][5]);
-  display.print(buf);
+  if (selectedFlutter > 0) {
+    display.setCursor(Hofs, curLine++*Vofs);
+    sprintf(buf, "W: %4d", (int)ledWls[selectedFlutter-1]);
+    display.print(buf);
+    display.setCursor(Hofs, curLine++*Vofs);
+    sprintf(buf, "P:%5d", (int)flashPWMValue[selectedFlutter-1]);
+    display.print(buf);
+  }
   
   display.display(); // Push buffer to screen
 }
@@ -308,6 +293,10 @@ void parseSerialCommand(String command) {
         int channel = command.substring(3, 5).toInt(); // Extract channel number (XX)
         int value = command.substring(5).toInt();   // Extract PWM value (YYYY)
         setPWMDutyCycle(channel, value);              // Set the PWM value for the channel
+    } else if (command.startsWith("ttl")) { // Trigger TTL flash: ttl*
+        serialTTLordered = true;
+    } else {
+        Serial.println("Unknown command. Type 'H*' for help.");
     }
  }
 
@@ -462,6 +451,17 @@ String getBinaryValue(int value, int numBits, char offChar = '_', char onChar = 
     return binaryString; // Return the binary representation as a string
 }
 
+void flashLight(int flashChannel, int flashDuration_ms) {
+  flashChannel--; // Convert to 0-based index
+  setPWMDutyCycle(flashChannel, flashPWMValue[flashChannel]); // Set the specified channel to the flash PWM value
+  digitalWrite(TTL_OUT_PIN, HIGH); // Set TTL output HIGH
+  
+  delay(flashDuration_ms); // Wait for the specified duration
+  
+  setPWMDutyCycle(flashChannel, 0); // Turn off the specified channel
+  digitalWrite(TTL_OUT_PIN, LOW); // Set TTL output LOW
+}
+
 void setupDisplay() {
     Wire.begin();
 
@@ -487,6 +487,12 @@ void setupButtons() {
   btnD.interval(BTN_DEBOUNCE_INTERVAL_MS);
 }
 
+void setupTTL() {
+    pinMode(TTL_IN_PIN, INPUT_PULLDOWN);
+    pinMode(TTL_OUT_PIN, OUTPUT);
+    digitalWrite(TTL_OUT_PIN, LOW); // Ensure TTL output starts LOW
+}
+
 void setupPWM() {
     Serial.begin(115200);
     showWelcomeScreen();
@@ -499,16 +505,26 @@ void loopPWM() {
     checkButtonAndCycleFlutter(); // Check button state and cycle through flutter options
     
     if(selectedFlutter > 0) { // If flutter is active
-        updateLights();
+        //updateLights();
+
+        if (digitalRead(TTL_IN_PIN) == HIGH || serialTTLordered) {
+          serialTTLordered = false;
+          flashLight(selectedFlutter, flashDuration_ms);
+        }
+        while(digitalRead(TTL_IN_PIN) == HIGH) {
+          delay(1); // Wait for TTL input to go LOW
+        }
+        
     }
 
-    maybeDimDisplay();
+    //maybeDimDisplay();
 }
 
 void setup() {
     setupPWM();
     setupButtons();
     setupDisplay();
+    setupTTL();
 }
 
 void loop() {
