@@ -64,8 +64,11 @@ static inline int wrap_dec(int v, int n) {        // (v-1+n) % n without negativ
 }
 
 // SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE
-#include "LightCube2.h"
+//#include "LightCube2.h"
 //#include "LightCube3.h"
+//#include "LightCube4.h"
+//#include "LightCube5.h"
+#include "LightCubeM.h"
 
 int pwmValues[NUM_CHANNELS] = {0}; // Start with 0% duty cycle
 int pwmFrequency = 500; // Default PWM frequency in Hz
