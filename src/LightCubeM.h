@@ -31,7 +31,7 @@ int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
   {   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 4095}
 };
 
-int flashPWMValue[NUM_CHANNELS] = {12815, 16000, 20129, 11277, 12906, 15355, 21698, 27475, 25659, 21907, 21183, 65535, 39385, 24784, 16968, 13514};
+int flashPWMValue[NUM_CHANNELS] = {18075, 20429, 25362, 14258, 15165, 17834, 23528, 27738, 25404, 20905, 20351, 65535, 35305, 22713, 16567, 12773};
 int flashDuration_ms = 3; // Duration for which the light stays on during a flash
 int TTLdebouceTime_ms = 15; // Minimum time between TTL triggers to avoid multiple triggers from a single pulse
 boolean serialTTLordered = false;
