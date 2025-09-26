@@ -16,7 +16,7 @@
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-const unsigned DISPLAY_IDLE_MS = 5000;   // <- adjust as you like
+const unsigned DISPLAY_IDLE_MS = 10000;   // <- adjust as you like
 static unsigned long lastActivityMs = 0;
 static bool displayDimmed = false;
 
@@ -66,9 +66,9 @@ static inline int wrap_dec(int v, int n) {        // (v-1+n) % n without negativ
 // SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE ====== SELECT DEVICE
 //#include "LightCube2.h"
 //#include "LightCube3.h"
-//#include "LightCube4.h"
+#include "LightCube4.h"
 //#include "LightCube5.h"
-#include "LightCubeM.h"
+//#include "LightCubeM.h"
 
 int pwmValues[NUM_CHANNELS] = {0}; // Start with 0% duty cycle
 int pwmFrequency = 500; // Default PWM frequency in Hz
