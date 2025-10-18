@@ -1,3 +1,9 @@
+// This is a header file with definitions for the LightCube5.
+
+// When adding a new spectrum to the pwmBank, also update NUM_SLOTS.
+// Important 1: Values here must match the resolution used in main.cpp (default 16-bit = 0..65535)
+// Important 2: After the last line of the pwmBank, do NOT put a comma!
+
 const int BTN_UP_PIN = 1;  // Button to increase the selected flutter option
 const int BTN_DW_PIN = 0;  // Button to decrease the selected flutter option
 
@@ -6,7 +12,7 @@ const int BTN_DW_PIN = 0;  // Button to decrease the selected flutter option
 const int pwmPins[NUM_CHANNELS] = {  8,  14,  21,  16,  10,  18,   9,  11,  19,  15,  17,  20,  13,  22,  12,   7}; // PWM-capable pins
 const int ledWls[NUM_CHANNELS]  = {364, 373, 390, 401, 419, 424, 454, 470, 489, 517, 543, 594, 623, 632, 657, 680}; // WLS
 
-const int NUM_SLOTS = 48;
+const int NUM_SLOTS = 50;
 int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
   {    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0}, // 0
   {65535,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0}, // 1
@@ -55,118 +61,9 @@ int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
   { 5911,  4991,  2462,  3364,  1612,  2786,  3495,  1830,  3381,  2315,  6553,     0,     0,   233,   341,   586}, // 44 eug06yes 10% power
   { 6553,  5356,  2666,  3090,  1518,  2098,  2753,  1582,  2704,  2029,  2431,     0,     7,   130,   206,   399}, // 45 mar06yes 10% power
   { 2309,  2108,  1068,  1590,   717,  1461,  1843,  1095,  2044,  1205,  6553,     0,     0,    55,   107,   226}, // 46 eug12yes 10% power
-  { 6553,  5787,  2976,  3734,  1759,  2838,  3705,  2411,  4163,  3481,  6375,     0,     0,   136,   213,   435}  // 47 mar12yes 10% power
+  { 6553,  5787,  2976,  3734,  1759,  2838,  3705,  2411,  4163,  3481,  6375,     0,     0,   136,   213,   435}, // 47 mar12yes 10% power
+  {61054, 65535, 37197, 28909, 20000, 40704, 45087, 33139, 59630,     0,     0,     0,     0,     0,     0,     0}, // 48 Telemachus F blue < 500
+  {  423,   344,   401,     0,     0,    78,   192,     0,     0,     0, 36053, 65535, 33803, 23182, 33322, 45152}  // 49 Telemachus F oran > 575
 };
 
-// flutterParams holds the control values for switching between pwmBanks with a particular transition
-// Position 0: light setting 1
-// Position 1: light setting 2
-// Position 2: frequency [Hz]
-// Position 3: duty cycle
-// Position 4: part of duty cycle for transitions
-// Position 5: type of transition (0: linear, 1: sine)
-const int NUM_OPTIONS = 49;
-float flutterParams[NUM_OPTIONS][6] = {
-    { 0,     0,      1.0,     50.0,      20.0,       1},
-    { 1,     9,      0.8,     50.0,      20.0,       0},
-    { 2,    10,      0.8,     50.0,      20.0,       0},
-    { 3,    11,      0.8,     50.0,      20.0,       0},
-    { 4,    12,      0.8,     50.0,      20.0,       0},
-    { 5,    13,      0.8,     50.0,      20.0,       0},
-    { 6,    14,      0.8,     50.0,      20.0,       0},
-    { 7,    15,      0.8,     50.0,      20.0,       0},
-    { 8,    16,      0.8,     50.0,      20.0,       0},
-    { 0,    17,      1.0,     75.0,      20.0,       1},
-    { 0,    18,      1.0,     75.0,      20.0,       1},
-    { 0,    19,      1.0,     75.0,      20.0,       1},
-    { 0,    20,      1.0,     75.0,      20.0,       1},
-    { 0,    21,      1.0,     75.0,      20.0,       1},
-    { 0,    22,      1.0,     75.0,      20.0,       1},
-    { 0,    23,      1.0,     75.0,      20.0,       1},
-    { 0,    24,      1.0,     75.0,      20.0,       1},
-    {25,    25,      1.0,     75.0,      20.0,       0},
-    {26,    26,      1.0,     75.0,      20.0,       0},
-    { 0,     0,      3.0,     50.0,      20.0,       1},
-    { 0,    27,      3.0,     50.0,      20.0,       1},
-    { 0,    28,      3.0,     50.0,      20.0,       1},
-    { 0,    29,      3.0,     50.0,      20.0,       1},
-    { 0,    30,      3.0,     50.0,      20.0,       1},
-    { 0,    31,      3.0,     50.0,      20.0,       1},
-    { 0,    32,      3.0,     50.0,      20.0,       1},
-    { 0,    33,      3.0,     50.0,      20.0,       1},
-    { 0,    34,      3.0,     50.0,      20.0,       1},
-    { 0,    35,      3.0,     50.0,      20.0,       1},
-    { 0,    35,      5.0,     50.0,      20.0,       1},
-    { 0,    35,      9.0,     50.0,      20.0,       1},
-    {35,    35,      3.0,     50.0,      20.0,       1},
-    { 0,    36,      5.8,     50.0,      20.0,       1},
-    { 0,    37,      5.8,     50.0,      20.0,       1},
-    { 0,    38,      3.7,     50.0,      20.0,       1},
-    { 0,    39,      3.7,     50.0,      20.0,       1},
-    {36,    36,      1.0,     50.0,      20.0,       1},
-    {37,    37,      1.0,     50.0,      20.0,       1},
-    {38,    38,      1.0,     50.0,      20.0,       1},
-    {39,    39,      1.0,     50.0,      20.0,       1},
-    { 0,     0,      3.0,     50.0,      20.0,       1},
-    { 0,    40,      3.0,     50.0,      20.0,       1},
-    { 0,    41,      3.0,     50.0,      20.0,       1},
-    { 0,    42,      3.0,     50.0,      20.0,       1},
-    { 0,    43,      3.0,     50.0,      20.0,       1},
-    { 0,    44,      3.0,     50.0,      20.0,       1},
-    { 0,    45,      3.0,     50.0,      20.0,       1},
-    { 0,    46,      3.0,     50.0,      20.0,       1},
-    { 0,    47,      3.0,     50.0,      20.0,       1}
-};
-
-#define DESC_MAX_LEN 32
-char flutterDescriptions[NUM_OPTIONS][DESC_MAX_LEN] = {
-    "Off", 
-    "Check 1 9", 
-    "Check 2 10", 
-    "Check 3 11", 
-    "Check 4 12", 
-    "Check 5 13", 
-    "Check 6 14", 
-    "Check 7 15", 
-    "Check 8 16", 
-    "Flat PolNo", 
-    "Forest PolNo", 
-    "Noon PolNo", 
-    "Morning PolNo", 
-    "Flat PolYes", 
-    "Forest PolYes", 
-    "Noon PolYes", 
-    "Morning PolYes",
-    "Morning light",
-    "Noon light",
-    "Off 2",
-    "eug06no",
-    "mar06no",
-    "eug12no",
-    "mar12no",
-    "eug06yes",
-    "mar06yes",
-    "eug12yes",
-    "mar12yes",
-    "Blue3",
-    "Blue5",
-    "Blue9",
-    "BlueON",
-    "Tele F blue",
-    "Tele F oran",
-    "Hecu F oran",
-    "Hecu M oran",
-    "Tele F blue ON",
-    "Tele F oran ON",
-    "Hecu F oran ON",
-    "Hecu M oran ON",
-    "Off 3",
-    "eug06no  10perc",
-    "mar06no  10perc",
-    "eug12no  10perc",
-    "mar12no  10perc",
-    "eug06yes 10perc",
-    "mar06yes 10perc",
-    "eug12yes 10perc",
-    "mar12yes 10perc",
-};
+#include "AllCubesFlutterPrograms.h"
