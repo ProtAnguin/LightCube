@@ -12,7 +12,7 @@ const int BTN_DW_PIN = 0;  // Button to decrease the selected flutter option
 const int pwmPins[NUM_CHANNELS] = {  8,  14,  21,  16,  10,  18,   9,  11,  19,  15,  17,  20,  13,  22,  12,   7}; // PWM-capable pins
 const int ledWls[NUM_CHANNELS]  = {364, 373, 390, 401, 419, 424, 454, 470, 489, 517, 543, 594, 623, 632, 657, 680}; // WLS
 
-const int NUM_SLOTS = 50;
+const int NUM_SLOTS = 51;
 int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
   {    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0}, // 0
   {65535,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0}, // 1
@@ -63,7 +63,8 @@ int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
   { 2309,  2108,  1068,  1590,   717,  1461,  1843,  1095,  2044,  1205,  6553,     0,     0,    55,   107,   226}, // 46 eug12yes 10% power
   { 6553,  5787,  2976,  3734,  1759,  2838,  3705,  2411,  4163,  3481,  6375,     0,     0,   136,   213,   435}, // 47 mar12yes 10% power
   {61054, 65535, 37197, 28909, 20000, 40704, 45087, 33139, 59630,     0,     0,     0,     0,     0,     0,     0}, // 48 Telemachus F blue < 500
-  {  423,   344,   401,     0,     0,    78,   192,     0,     0,     0, 36053, 65535, 33803, 23182, 33322, 45152}  // 49 Telemachus F oran > 575
+  {  423,   344,   401,     0,     0,    78,   192,     0,     0,     0, 36053, 65535, 33803, 23182, 33322, 45152}, // 49 Telemachus F oran > 575
+  {    0, 65535, 65535, 65535,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0}  // 50 Scorpion seeking light
 };
 
 #include "AllCubesFlutterPrograms.h"

@@ -119,7 +119,7 @@ void showStatus() {
     Serial.println("Channel | PWM value | peak WL");
     Serial.println("----------------------------");
     for (int i = 0; i < NUM_CHANNELS; i++) {
-        Serial.printf("   %2d   |   %4d    | %3d \n", pwmPins[i], pwmValues[i], ledWls[i]);
+        Serial.printf("   %2d   |   %5d    | %3d \n", pwmPins[i], pwmValues[i], ledWls[i]);
     }
     Serial.println("============================\n");
 }
