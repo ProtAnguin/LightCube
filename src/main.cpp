@@ -97,7 +97,6 @@ void showHelpScreen() {
     Serial.println(" B<bank>* - Load a bank of values");
     Serial.println(" F<flutter>* - Set flutter parameters");
     Serial.println("----------------------------");
-    Serial.println("Channels used: 3, 4, 5, 6, 9, 10, 20, 21, 22, 23, 25, 32");
     Serial.println("Bit depth affects duty cycle range (e.g., 8-bit: 0-255, 12-bit: 0-4095)");
     Serial.println("Changing bit depth resets all duty cycles to 0");
     Serial.println("============================\n");
