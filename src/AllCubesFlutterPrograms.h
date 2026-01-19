@@ -10,7 +10,7 @@
 // Position 3: duty cycle [0.00 .. 100.00 %]
 // Position 4: part of duty cycle for transitions  [0.00 .. 100.00 %]
 // Position 5: type of transition (0: linear, 1: sine)
-const int NUM_OPTIONS = 52;
+const int NUM_OPTIONS = 56;
 float flutterParams[NUM_OPTIONS][6] = {
     { 0,     0,      1.0,     50.0,      20.0,       1},
     { 1,     9,      0.8,     50.0,      20.0,       0},
@@ -63,10 +63,14 @@ float flutterParams[NUM_OPTIONS][6] = {
     { 0,    45,      3.0,     50.0,      20.0,       1},
     { 0,    46,      3.0,     50.0,      20.0,       1},
     { 0,    47,      3.0,     50.0,      20.0,       1},
-    {50,    50,      1.0,     50.0,      20.0,       1}
+    {50,    50,      1.0,     50.0,      20.0,       1},
+    {51,    51,      1.0,     50.0,      20.0,       1},
+    {52,    52,      1.0,     50.0,      20.0,       1},
+    {53,    53,      1.0,     50.0,      20.0,       1},
+    {54,    54,      1.0,     50.0,      20.0,       1}
 };
 
-#define DESC_MAX_LEN 32
+#define DESC_MAX_LEN 36
 char flutterDescriptions[NUM_OPTIONS][DESC_MAX_LEN] = {
     "Off", 
     "Check 1 9", 
@@ -119,5 +123,9 @@ char flutterDescriptions[NUM_OPTIONS][DESC_MAX_LEN] = {
     "mar06yes 10perc",
     "eug12yes 10perc",
     "mar12yes 10perc",
-    "Scorpion seeking light"
+    "Scorpion seeking light",
+    "Flat light",
+    "Forrest light",
+    "Noon light",
+    "Morning light"
 };
