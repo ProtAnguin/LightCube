@@ -62,7 +62,7 @@ static inline int wrap_inc(int v, int n) {        // (v+1) % n
 static inline int wrap_dec(int v, int n) {        // (v-1+n) % n without negatives
   v--; if (v < 0) v = n - 1; return v;
 }
-#include "LightCubeM.h"
+#include "LightCube3forPracticals.h"
 
 int pwmValues[NUM_CHANNELS] = {0}; // Start with 0% duty cycle
 int pwmFrequency = 500; // Default PWM frequency in Hz
@@ -459,7 +459,9 @@ void flashLight(int flashChannel, int flashDuration_ms, int debounceTime_ms) {
   setPWMDutyCycle(flashChannel, 0); // Turn off the specified channel
   digitalWrite(TTL_OUT_PIN, LOW); // Set TTL output LOW
 
-  delay(debounceTime_ms-flashDuration_ms); // Debounce delay to avoid multiple triggers
+  if (debounceTime_ms > flashDuration_ms) {
+    delay(debounceTime_ms-flashDuration_ms); // Debounce delay to avoid multiple triggers
+  }
 }
 
 void setupDisplay() {

@@ -6,8 +6,8 @@ const int TTL_OUT_PIN = 3;
 
 #define NUM_CHANNELS 16
 //                                   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16
-const int pwmPins[NUM_CHANNELS] = { 13,  17,   7,  11,  15,  18,  10,  22,  19,  16,   9,  12,  21,  20,   8,  14}; // PWM-capable pins
-const int ledWls[NUM_CHANNELS]  = {402, 412, 424, 427, 444, 465, 486, 495, 518, 545, 554, 576, 595, 624, 627, 657}; // Peak wavelengths for each channel
+const int pwmPins[NUM_CHANNELS] = {  7,  20,  14,   9,  11,  16,  22,  10,  18,  13,  12,  17,  19,  15,   8,  21}; // PWM-capable pins
+const int ledWls[NUM_CHANNELS]  = {364, 382, 390, 402, 424, 427, 444, 466, 488, 514, 549, 594, 620, 627, 656, 679}; // WLS
 
 const int NUM_SLOTS = 17; 
 int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
@@ -31,10 +31,10 @@ int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
   {    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0, 65535}
 };
 
-int flashPWMValue[NUM_CHANNELS] = {7412,  6470,  8492,  5784,  6249,  7040,  9416, 12489, 10464, 25811,  8135, 65535, 14194,  8669,  6634,  4937};
-int flashDuration_ms = 3; // Duration for which the light stays on during a flash
+int flashPWMValue[NUM_CHANNELS] = {65535, 57472, 27129, 21156, 22061, 15747, 17545, 19292, 27213, 29319, 22277, 36909, 26312, 15503, 14344, 13067};
+int flashDuration_ms = 150; // Duration for which the light stays on during a flash
 int TTLdebouceTime_ms = 15; // Minimum time between TTL triggers to avoid multiple triggers from a single pulse
-boolean serialTTLordered = false;
+bool serialTTLordered = false;
 
 // flutterParams holds the control values for switching between pwmBanks with a particular transition
 // Position 0: light setting 1
