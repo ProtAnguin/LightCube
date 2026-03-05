@@ -78,6 +78,8 @@ unsigned long timePoints[5] = {0, 1, 500000, 500001, 999999}; // Time points for
 unsigned long cycleTimeCurent = 0; // Current time in the cycle
 unsigned long cycleTimeStart = 0; // Last time the lights were updated
 
+float flashAttenuationLog = 0; // Logarithmic attenuation for flash (0 = no attenuation, higher = more attenuation)
+
 void showWelcomeScreen() {
     Serial.println("\n========================================");
     Serial.println(" PWM Controller for Raspberry Pi Pico 2");
@@ -89,13 +91,14 @@ void showWelcomeScreen() {
 void showHelpScreen() {
     Serial.println("\n========= HELP MENU =========");
     Serial.println("Available Commands:");
-    Serial.println(" C<channel>,<value>* - Set PWM for a channel");
-    Serial.println(" R<bitdepth>* - Set PWM resolution (8-16 bits)");
     Serial.println(" W* - Show welcome screen");
     Serial.println(" H* - Show this help menu");
     Serial.println(" S* - Show current PWM status");
     Serial.println(" B<bank>* - Load a bank of values");
     Serial.println(" F<flutter>* - Set flutter parameters");
+    Serial.println(" A<attenuation>* - Set flash attenuation (logarithmic)");
+    Serial.println(" C<channel>,<value>* - Set PWM for a channel");
+    Serial.println(" R<bitdepth>* - Set PWM resolution (8-16 bits)");
     Serial.println("----------------------------");
     Serial.println("Bit depth affects duty cycle range (e.g., 8-bit: 0-255, 12-bit: 0-4095)");
     Serial.println("Changing bit depth resets all duty cycles to 0");
@@ -104,17 +107,20 @@ void showHelpScreen() {
 
 void showStatus() {
     int maxPWMValue = (1 << pwmResolution) - 1; // Maximum PWM value based on resolution
-    Serial.println("\n========= PWM STATUS =========");
-    Serial.printf("CPU Speed: %lu Hz\n", F_CPU);
-    Serial.printf("Bit Depth: %d-bit\n", pwmResolution);
-    Serial.printf("Current PWM Frequency: %d Hz\n", pwmFrequency);
-    Serial.printf("Maximum Possible PWM Value: %d\n", maxPWMValue); // Report the maximum PWM value
-    Serial.println("Channel | PWM value | peak WL");
-    Serial.println("----------------------------");
+    Serial.println("\n================== PWM STATUS ==================");
+    Serial.printf("                    Bit Depth: %d-bit\n", pwmResolution);
+    Serial.printf("   Maximum Possible PWM Value: %d\n", maxPWMValue); // Report the maximum PWM value
+    Serial.printf("                    CPU Speed: %lu Hz\n", F_CPU);
+    Serial.printf("        Current PWM Frequency: %d Hz\n", pwmFrequency);
+    Serial.printf("Flash Attenuation (log scale): %.4f\n", flashAttenuationLog);
+    Serial.println("");
+    Serial.println("   ##   | Channel | PWM value | peak WL");
+    Serial.println("--------------------------------------------------");
     for (int i = 0; i < NUM_CHANNELS; i++) {
-        Serial.printf("   %2d   |   %4d    | %3d \n", pwmPins[i], pwmValues[i], ledWls[i]);
+        Serial.printf("   %2d   |    %2d   |   %4d    | %3d nm\n", i+1, pwmPins[i], pwmValues[i], ledWls[i]);
     }
-    Serial.println("============================\n");
+    Serial.println("==================================================\n");
+    
 }
 
 void updatePWMSettings() {
@@ -216,8 +222,13 @@ void updateDisplay() {
     display.setCursor(Hofs, curLine++*Vofs);
     sprintf(buf, "W: %4d", (int)ledWls[selectedFlutter-1]);
     display.print(buf);
+
     display.setCursor(Hofs, curLine++*Vofs);
-    sprintf(buf, "P:%5d", (int)flashPWMValue[selectedFlutter-1]);
+    sprintf(buf, "P:%5d", (int)(flashPWMValue[selectedFlutter-1]* pow(10, -flashAttenuationLog)));
+    display.print(buf);
+
+    display.setCursor(Hofs, curLine++*Vofs);
+    sprintf(buf, "A:%5.3f", flashAttenuationLog);
     display.print(buf);
   }
   
@@ -282,6 +293,9 @@ void parseSerialCommand(String command) {
         selectedFlutter = constrain(command.substring(1).toInt(), 0, NUM_OPTIONS-1);
         updateFlutterTimePoints();
         reportFlutterParameters();
+    } else if (command.startsWith("A")) { // Set flash attenuation: A<value>*
+        flashAttenuationLog = constrain(command.substring(1).toFloat(), 0, 5); // Limit attenuation to a reasonable range (0 to 2)
+        Serial.printf(" Flash attenuation set to: %.4f (log scale)\n", flashAttenuationLog);
     } else if (command.startsWith("set")) { // Set PWM for a specific channel: setXXYYYY*
         int channel = command.substring(3, 5).toInt(); // Extract channel number (XX)
         int value = command.substring(5).toInt();   // Extract PWM value (YYYY)
@@ -291,6 +305,7 @@ void parseSerialCommand(String command) {
     } else {
         Serial.println("Unknown command. Type 'H*' for help.");
     }
+    updateDisplay();
  }
 
 void processSerialInput() {
@@ -449,9 +464,12 @@ String getBinaryValue(int value, int numBits, char offChar = '_', char onChar = 
     return binaryString; // Return the binary representation as a string
 }
 
-void flashLight(int flashChannel, int flashDuration_ms, int debounceTime_ms) {
+void flashLight(int flashChannel, int flashDuration_ms, int debounceTime_ms, float attenuationLog) {
   flashChannel--; // Convert to 0-based index
-  setPWMDutyCycle(flashChannel, flashPWMValue[flashChannel]); // Set the specified channel to the flash PWM value
+
+  int flashValue = flashPWMValue[flashChannel] * pow(10, -attenuationLog); // Apply logarithmic attenuation
+
+  setPWMDutyCycle(flashChannel, flashValue); // Set the specified channel to the flash PWM value
   digitalWrite(TTL_OUT_PIN, HIGH); // Set TTL output HIGH
   
   delay(flashDuration_ms); // Wait for the specified duration
@@ -462,6 +480,7 @@ void flashLight(int flashChannel, int flashDuration_ms, int debounceTime_ms) {
   if (debounceTime_ms > flashDuration_ms) {
     delay(debounceTime_ms-flashDuration_ms); // Debounce delay to avoid multiple triggers
   }
+  updateDisplay(); // Update the display to reflect the change
 }
 
 void setupDisplay() {
@@ -511,7 +530,7 @@ void loopPWM() {
 
         if (digitalRead(TTL_IN_PIN) == HIGH || serialTTLordered) {
           serialTTLordered = false;
-          flashLight(selectedFlutter, flashDuration_ms, TTLdebouceTime_ms);
+          flashLight(selectedFlutter, flashDuration_ms, TTLdebouceTime_ms, flashAttenuationLog);
         }
     }
 
