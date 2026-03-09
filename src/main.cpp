@@ -508,8 +508,16 @@ void setupButtons() {
   btnD.interval(BTN_DEBOUNCE_INTERVAL_MS);
 }
 
+inline bool ttlTriggerReceived() {
+    return digitalRead(TTL_IN_PIN) == TTL_TRIGGER_ACTIVE_STATE;
+}
+
 void setupTTL() {
-    pinMode(TTL_IN_PIN, INPUT_PULLDOWN);
+    pinMode(
+        TTL_IN_PIN,
+        (TTL_TRIGGER_ACTIVE_STATE == HIGH) ? INPUT_PULLDOWN : INPUT_PULLUP
+    );
+
     pinMode(TTL_OUT_PIN, OUTPUT);
     digitalWrite(TTL_OUT_PIN, LOW); // Ensure TTL output starts LOW
 }
@@ -528,7 +536,7 @@ void loopPWM() {
     if(selectedFlutter > 0) { // If flutter is active
         //updateLights();
 
-        if (digitalRead(TTL_IN_PIN) == HIGH || serialTTLordered) {
+        if (ttlTriggerReceived() || serialTTLordered) {
           serialTTLordered = false;
           flashLight(selectedFlutter, flashDuration_ms, TTLdebouceTime_ms, flashAttenuationLog);
         }

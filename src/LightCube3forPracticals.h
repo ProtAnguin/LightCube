@@ -4,6 +4,8 @@ const int BTN_DW_PIN = 0;  // Button to decrease the selected flutter option
 const int TTL_IN_PIN  = 2;
 const int TTL_OUT_PIN = 3;
 
+constexpr uint8_t TTL_TRIGGER_ACTIVE_STATE = LOW;   // set to LOW for active-low trigger
+
 #define NUM_CHANNELS 16
 //                                   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16
 const int pwmPins[NUM_CHANNELS] = {  7,  20,  14,   9,  11,  16,  22,  10,  18,  13,  12,  17,  19,  15,   8,  21}; // PWM-capable pins
