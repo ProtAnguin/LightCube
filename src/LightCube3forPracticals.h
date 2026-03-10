@@ -9,11 +9,11 @@ constexpr uint8_t TTL_TRIGGER_ACTIVE_STATE = LOW;   // set to LOW for active-low
 #define NUM_CHANNELS 16
 //                                   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16
 const int pwmPins[NUM_CHANNELS] = {  7,  20,  14,   9,  11,  16,  22,  10,  18,  13,  12,  17,  19,  15,   8,  21}; // PWM-capable pins
-const int ledWls[NUM_CHANNELS]  = {364, 382, 390, 402, 424, 427, 444, 466, 488, 514, 549, 594, 620, 627, 656, 679}; // WLS
+const int ledWls[NUM_CHANNELS]  = {363, 371, 389, 401, 422, 427, 444, 465, 486,   0, 547, 593, 621, 626, 656, 679}; // WLS
 
 const int NUM_SLOTS = 17; 
 int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
-//   364,   382,   390,   402,   424,   427,   444,   466,   488,   514,   549,   594,   620,   627,   656,   679
+//   363,   371,   389,   401,   422,   427,   444,   465,   486,     0,   547,   593,   621,   626,   656,   679
   {    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0},
   {65535,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0},
   {    0, 65535,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0},
@@ -33,7 +33,8 @@ int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
   {    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0, 65535}
 };
 
-int flashPWMValue[NUM_CHANNELS] = {65535, 57472, 27129, 21156, 22061, 15747, 17545, 19292, 27213, 29319, 22277, 36909, 26312, 15503, 14344, 13067};
+int flashPWMValue[NUM_CHANNELS] = {65535, 56422, 30510, 21874, 24228, 16781, 17863, 20852, 27455,     0, 23522, 39233, 28826, 18144, 15216, 14075}; // PWM values for each channel during a flash, calculated based on the desired flash intensity and the LED characteristics
+
 int flashDuration_ms = 150; // Duration for which the light stays on during a flash
 int TTLdebouceTime_ms = 15; // Minimum time between TTL triggers to avoid multiple triggers from a single pulse
 bool serialTTLordered = false;
