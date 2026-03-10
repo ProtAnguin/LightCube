@@ -16,7 +16,7 @@
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-const unsigned DISPLAY_IDLE_MS = 5000;   // <- adjust as you like
+const unsigned DISPLAY_IDLE_MS = 3000;   // <- adjust as you like
 static unsigned long lastActivityMs = 0;
 static bool displayDimmed = false;
 
@@ -542,7 +542,7 @@ void loopPWM() {
         }
     }
 
-    //maybeDimDisplay();
+    maybeDimDisplay();
 }
 
 void setup() {
