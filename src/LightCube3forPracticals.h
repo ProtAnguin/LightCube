@@ -33,7 +33,8 @@ int pwmBank[NUM_SLOTS][NUM_CHANNELS] = {
   {    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0, 65535}
 };
 
-int flashPWMValue[NUM_CHANNELS] = {65535, 56422, 30510, 21874, 24228, 16781, 17863, 20852, 27455,     0, 23522, 39233, 28826, 18144, 15216, 14075}; // PWM values for each channel during a flash, calculated based on the desired flash intensity and the LED characteristics
+//int flashPWMValue[NUM_CHANNELS] = {65535, 56422, 30510, 21874, 24228, 16781, 17863, 20852, 27455,     0, 23522, 39233, 28826, 18144, 15216, 14075}; // PWM values for each channel during a flash, calculated based on the desired flash intensity and the LED characteristics
+int flashPWMValue[NUM_CHANNELS] = {27595, 26947, 14639,  9886, 11165,  7078,  8548,  9845, 11636,     0, 10243, 16272, 12683,  8016,  6320,  6209}; // PWM values for each channel during a flash, calculated based on the desired flash intensity and the LED characteristics
 
 int flashDuration_ms = 150; // Duration for which the light stays on during a flash
 int TTLdebouceTime_ms = 15; // Minimum time between TTL triggers to avoid multiple triggers from a single pulse
